@@ -416,6 +416,8 @@ export default class QRCanvas {
       throw "image is not defined";
     }
 
+    this._image.crossOrigin = "anonymous";
+
     const options = this._options;
     const xBeginning = Math.floor((options.width - count * dotSize) / 2);
     const yBeginning = Math.floor((options.height - count * dotSize) / 2);
