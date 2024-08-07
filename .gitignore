@@ -2,7 +2,8 @@
 .idea
 
 # Lib folder
-/lib
+#/lib
+/lib/*.test.*
 
 # npm modules
 /node_modules
