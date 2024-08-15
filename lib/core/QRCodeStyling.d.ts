@@ -1,8 +1,8 @@
 /// <reference types="node" />
-import QRCanvas from "./QRCanvas";
-import QRSVG from "./QRSVG";
-import { RequiredOptions } from "./QROptions";
-import { Extension, QRCode, Options, DownloadOptions } from "../types";
+import QRCanvas from "./QRCanvas.js";
+import QRSVG from "./QRSVG.js";
+import { RequiredOptions } from "./QROptions.js";
+import { Extension, QRCode, Options, DownloadOptions } from "../types/index.js";
 export default class QRCodeStyling {
     _options: RequiredOptions;
     _container?: HTMLElement;

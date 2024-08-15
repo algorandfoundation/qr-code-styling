@@ -1,4 +1,4 @@
-import { CornerDotType, RotateFigureArgsCanvas, BasicFigureDrawArgsCanvas, DrawArgsCanvas } from "../../../types";
+import { CornerDotType, RotateFigureArgsCanvas, BasicFigureDrawArgsCanvas, DrawArgsCanvas } from "../../../types/index.js";
 export default class QRCornerDot {
     _context: CanvasRenderingContext2D;
     _type: CornerDotType;

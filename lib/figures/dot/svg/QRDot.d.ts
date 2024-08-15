@@ -1,4 +1,4 @@
-import { DotType, GetNeighbor, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types";
+import { DotType, GetNeighbor, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types/index.js";
 export default class QRDot {
     _element?: SVGElement;
     _svg: SVGElement;

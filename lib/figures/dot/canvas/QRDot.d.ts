@@ -1,4 +1,4 @@
-import { DotType, GetNeighbor, RotateFigureArgsCanvas, BasicFigureDrawArgsCanvas, DrawArgsCanvas } from "../../../types";
+import { DotType, GetNeighbor, RotateFigureArgsCanvas, BasicFigureDrawArgsCanvas, DrawArgsCanvas } from "../../../types/index.js";
 export default class QRDot {
     _context: CanvasRenderingContext2D;
     _type: DotType;

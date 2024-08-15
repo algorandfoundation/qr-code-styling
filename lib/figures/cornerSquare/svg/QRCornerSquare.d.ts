@@ -1,4 +1,4 @@
-import { CornerSquareType, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types";
+import { CornerSquareType, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types/index.js";
 export default class QRCornerSquare {
     _element?: SVGElement;
     _svg: SVGElement;
