@@ -1,82 +1,27 @@
-# QR Code Styling
-[![Version](https://img.shields.io/npm/v/qr-code-styling.svg)](https://www.npmjs.org/package/qr-code-styling)
+# QRCode
+[![Version](https://img.shields.io/npm/v/@algorandfoundation/qr-code-styling.svg)](https://www.npmjs.org/package/@algorandfoundation/qr-code-styling)
 
-I am collecting community thoughts about future development of this library, please take a [small poll](https://docs.google.com/forms/d/e/1FAIpQLScJXv64WJQiCSW2pDmIEyMddsxE9KvY25IW_YnsOFd5FUqJig/viewform?usp=sf_link) to help me.
+This repository is forked from [qr-code-styling](https://github.com/kozakdenys/qr-code-styling) 
+and includes fixes for modern meta-frameworks. 
+Mainly producing a valid ESM bundle
 
-JavaScript library for generating QR codes with a logo and styling.
+## Get Started
 
-Try it here https://qr-code-styling.com
+The package is not published yet but you can install it directly from GitHub:
 
-If you have issues / suggestions / notes / questions, please open an issue or contact me. Let's create a cool library together.
-### Examples
-<p float="left">
-<img style="display:inline-block" src="https://raw.githubusercontent.com/kozakdenys/qr-code-styling/master/src/assets/facebook_example_new.png" width="240" />
-<img style="display:inline-block" src="https://raw.githubusercontent.com/kozakdenys/qr-code-styling/master/src/assets/qr_code_example.png" width="240" />
-<img style="display:inline-block" src="https://raw.githubusercontent.com/kozakdenys/qr-code-styling/master/src/assets/telegram_example_new.png" width="240" />
-</p>
-
-### Installation
-
-```
-npm install qr-code-styling
+```bash
+npm install algorandfoundation/qr-code-styling --save
 ```
 
 ### Usage
 
-```HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>QR Code Styling</title>
-    <script type="text/javascript" src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
-</head>
-<body>
-<div id="canvas"></div>
-<script type="text/javascript">
+Importing the `QrCodeStyling` class
 
-    const qrCode = new QRCodeStyling({
-        width: 300,
-        height: 300,
-        type: "svg",
-        data: "https://www.facebook.com/",
-        image: "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg",
-        dotsOptions: {
-            color: "#4267b2",
-            type: "rounded"
-        },
-        backgroundOptions: {
-            color: "#e9ebee",
-        },
-        imageOptions: {
-            crossOrigin: "anonymous",
-            margin: 20
-        }
-    });
+```typescript
+import {QrCodeStyling} from '@algorandfoundation/qr-code-styling'
 
-    qrCode.append(document.getElementById("canvas"));
-    qrCode.download({ name: "qr", extension: "svg" });
-</script>
-</body>
-</html>
+// handle creation...
 ```
----
-
-[**React example (Codesandbox)**](https://codesandbox.io/s/qr-code-styling-react-example-l8rwl?file=/src/App.js)
-
-[**Angular example (Codesandbox)**](https://codesandbox.io/s/agitated-panini-tpgb2?file=/src/app/app.component.ts)
-
----
-
-[**React example (source)**](https://github.com/kozakdenys/qr-code-styling-examples/tree/master/examples/react)
-
-[**Angular example (source)**](https://github.com/kozakdenys/qr-code-styling-examples/tree/master/examples/angular)
-
-[**Vue example (source)**](https://github.com/kozakdenys/qr-code-styling-examples/tree/master/examples/vue)
-
----
-
-### API Documentation
 
 #### QRCodeStyling instance
 `new QRCodeStyling(options) => QRCodeStyling`
@@ -204,6 +149,38 @@ extension|string (`'png' 'jpeg' 'webp' 'svg'`)|`'png'`      |Blob type on browse
 Param  |Type  |Description
 -------|------|--------------------------------------
 options|object|The same options as for initialization
+
+`QRCodeStyling.applyExtension(extension) => void`
+
+Param    |Type                  |Description
+---------|----------------------|------------------------------------------------------------------------------------------
+extension|(svg, options) => void|Extension is a function that takes svg and previously applied options and modifies an svg
+
+`applyExtension` example
+
+```JS
+const extension = (svg, options) => {
+    const { width, height } = options;
+    const size = Math.min(width, height);
+    const border = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    const borderAttributes = {
+        "fill": "none",
+        "x": (width - size + 40) / 2,
+        "y": (height - size + 40) / 2,
+        "width": size - 40,
+        "height": size - 40,
+        "stroke": 'black',
+        "stroke-width": 40,
+        "rx": 100,
+    };
+    Object.keys(borderAttributes).forEach(attribute => {
+      border.setAttribute(attribute, borderAttributes[attribute]);
+    });
+    svg.appendChild(border);
+};
+```
+
+`QRCodeStyling.deleteExtension() => void`
 
 `QRCodeStyling.download(downloadOptions) => Promise<void>`
 

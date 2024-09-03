@@ -5,9 +5,10 @@ export interface UnknownObject {
 export declare type DotType = "dots" | "rounded" | "classy" | "classy-rounded" | "square" | "extra-rounded";
 export declare type CornerDotType = "dot" | "square";
 export declare type CornerSquareType = "dot" | "square" | "extra-rounded";
-export declare type Extension = "svg" | "png" | "jpeg" | "webp";
+export declare type FileExtension = "svg" | "png" | "jpeg" | "webp";
 export declare type GradientType = "radial" | "linear";
 export declare type DrawType = "canvas" | "svg";
+export declare type ShapeType = "square" | "circle";
 export interface Canvas extends HTMLCanvasElement {
     toBuffer?: (type: string) => Buffer;
     createCanvas?: (width: number, height: number) => Canvas;
@@ -50,6 +51,9 @@ export interface CornerSquareTypes {
 export interface DrawTypes {
     [key: string]: DrawType;
 }
+export interface ShapeTypes {
+    [key: string]: ShapeType;
+}
 export declare type TypeNumber = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40;
 export declare type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 export declare type Mode = "Numeric" | "Alphanumeric" | "Byte" | "Kanji";
@@ -72,6 +76,7 @@ export interface QRCode {
 }
 export declare type Options = {
     type?: DrawType;
+    shape?: ShapeType;
     width?: number;
     height?: number;
     margin?: number;
@@ -107,6 +112,7 @@ export declare type Options = {
         gradient?: Gradient;
     };
     backgroundOptions?: {
+        round?: number;
         color?: string;
         gradient?: Gradient;
     };
@@ -114,7 +120,7 @@ export declare type Options = {
 export declare type FilterFunction = (i: number, j: number) => boolean;
 export declare type DownloadOptions = {
     name?: string;
-    extension?: Extension;
+    extension?: FileExtension;
 };
 export declare type DrawArgs = {
     x: number;
@@ -136,14 +142,6 @@ export declare type RotateFigureArgs = {
     rotation?: number;
     draw: () => void;
 };
-export declare type DrawArgsCanvas = DrawArgs & {
-    context: CanvasRenderingContext2D;
-};
-export declare type BasicFigureDrawArgsCanvas = BasicFigureDrawArgs & {
-    context: CanvasRenderingContext2D;
-};
-export declare type RotateFigureArgsCanvas = RotateFigureArgs & {
-    context: CanvasRenderingContext2D;
-};
 export declare type GetNeighbor = (x: number, y: number) => boolean;
+export declare type ExtensionFunction = (svg: SVGElement, options: Options) => void;
 export {};

@@ -1,13 +1,13 @@
 import calculateImageSize from "../tools/calculateImageSize";
+import toDataUrl from "../tools/toDataUrl";
 import errorCorrectionPercents from "../constants/errorCorrectionPercents";
-import QRDot from "../figures/dot/svg/QRDot";
-import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
-import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
+import QRDot from "../figures/dot/QRDot";
+import QRCornerSquare from "../figures/cornerSquare/QRCornerSquare";
+import QRCornerDot from "../figures/cornerDot/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import gradientTypes from "../constants/gradientTypes";
-import { QRCode, FilterFunction, Gradient, Window, Canvas } from "../types";
-
-declare const window: Window;
+import shapeTypes from "../constants/shapeTypes";
+import { QRCode, FilterFunction, Gradient } from "../types";
 
 const squareMask = [
   [1, 1, 1, 1, 1, 1, 1],
@@ -30,41 +30,23 @@ const dotMask = [
 ];
 
 export default class QRSVG {
-  _canvas?: Canvas;
-  _window: Window;
   _element: SVGElement;
   _defs: SVGElement;
+  _backgroundClipPath?: SVGElement;
   _dotsClipPath?: SVGElement;
   _cornersSquareClipPath?: SVGElement;
   _cornersDotClipPath?: SVGElement;
   _options: RequiredOptions;
   _qr?: QRCode;
   _image?: HTMLImageElement;
-  _imageUri?: string;
 
   //TODO don't pass all options to this class
   constructor(options: RequiredOptions) {
-    if (options.jsdom) {
-      this._window = new options.jsdom("", { resources: "usable" }).window;
-    } else {
-      this._window = window;
-    }
-    this._element = this._window.document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    this._element = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this._element.setAttribute("width", String(options.width));
     this._element.setAttribute("height", String(options.height));
-    this._defs = this._window.document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    this._defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     this._element.appendChild(this._defs);
-
-    if (options.imageOptions.saveAsBlob) {
-      if (options.nodeCanvas?.createCanvas) {
-        this._canvas = options.nodeCanvas.createCanvas(options.width, options.height);
-      } else {
-        this._canvas = document.createElement("canvas");
-      }
-      this._canvas.width = options.width;
-      this._canvas.height = options.height;
-    }
-    this._imageUri = options.image;
 
     this._options = options;
   }
@@ -81,18 +63,11 @@ export default class QRSVG {
     return this._element;
   }
 
-  clear(): void {
-    const oldElement = this._element;
-    this._element = oldElement.cloneNode(false) as SVGElement;
-    oldElement?.parentNode?.replaceChild(this._element, oldElement);
-    this._defs = this._window.document.createElementNS("http://www.w3.org/2000/svg", "defs");
-    this._element.appendChild(this._defs);
-  }
-
   async drawQR(qr: QRCode): Promise<void> {
     const count = qr.getModuleCount();
     const minSize = Math.min(this._options.width, this._options.height) - this._options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
+    const realQRSize = this._options.shape === shapeTypes.circle ? minSize / Math.sqrt(2) : minSize;
+    const dotSize = Math.floor(realQRSize / count);
     let drawImageSize = {
       hideXDots: 0,
       hideYDots: 0,
@@ -106,7 +81,6 @@ export default class QRSVG {
       //We need it to get image size
       await this.loadImage();
       if (!this._image) return;
-      this.imageToBlob();
       const { imageOptions, qrOptions } = this._options;
       const coverLevel = imageOptions.imageSize * errorCorrectionPercents[qrOptions.errorCorrectionLevel];
       const maxHiddenDots = Math.floor(coverLevel * count * count);
@@ -120,7 +94,6 @@ export default class QRSVG {
       });
     }
 
-    this.clear();
     this.drawBackground();
     this.drawDots((i: number, j: number): boolean => {
       if (this._options.imageOptions.hideBackgroundDots) {
@@ -147,7 +120,7 @@ export default class QRSVG {
     this.drawCorners();
 
     if (this._options.image) {
-      this.drawImage({ width: drawImageSize.width, height: drawImageSize.height, count, dotSize });
+      await this.drawImage({ width: drawImageSize.width, height: drawImageSize.height, count, dotSize });
     }
   }
 
@@ -171,6 +144,22 @@ export default class QRSVG {
           name: "background-color"
         });
       }
+
+      if (options.backgroundOptions?.round) {
+        const size = Math.min(options.width, options.height);
+        const element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._backgroundClipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+        this._backgroundClipPath.setAttribute("id", "clip-path-background-color");
+        this._defs.appendChild(this._backgroundClipPath);
+
+        element.setAttribute("x", String((options.width - size) / 2));
+        element.setAttribute("y", String((options.height - size) / 2));
+        element.setAttribute("width", String(size));
+        element.setAttribute("height", String(size));
+        element.setAttribute("rx", String((size / 2) * options.backgroundOptions.round));
+
+        this._backgroundClipPath.appendChild(element);
+      }
     }
   }
 
@@ -187,16 +176,13 @@ export default class QRSVG {
     }
 
     const minSize = Math.min(options.width, options.height) - options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
+    const realQRSize = options.shape === shapeTypes.circle ? minSize / Math.sqrt(2) : minSize;
+    const dotSize = Math.floor(realQRSize / count);
     const xBeginning = Math.floor((options.width - count * dotSize) / 2);
     const yBeginning = Math.floor((options.height - count * dotSize) / 2);
-    const dot = new QRDot({
-      svg: this._element,
-      type: options.dotsOptions.type,
-      window: this._window
-    });
+    const dot = new QRDot({ svg: this._element, type: options.dotsOptions.type });
 
-    this._dotsClipPath = this._window.document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+    this._dotsClipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
     this._dotsClipPath.setAttribute("id", "clip-path-dot-color");
     this._defs.appendChild(this._dotsClipPath);
 
@@ -204,10 +190,10 @@ export default class QRSVG {
       options: options.dotsOptions?.gradient,
       color: options.dotsOptions.color,
       additionalRotation: 0,
-      x: xBeginning,
-      y: yBeginning,
-      height: count * dotSize,
-      width: count * dotSize,
+      x: 0,
+      y: 0,
+      height: options.height,
+      width: options.width,
       name: "dot-color"
     });
 
@@ -236,6 +222,61 @@ export default class QRSVG {
         }
       }
     }
+
+    if (options.shape === shapeTypes.circle) {
+      const additionalDots = Math.floor((minSize / dotSize - count) / 2);
+      const fakeCount = count + additionalDots * 2;
+      const xFakeBeginning = xBeginning - additionalDots * dotSize;
+      const yFakeBeginning = yBeginning - additionalDots * dotSize;
+      const fakeMatrix: number[][] = [];
+      const center = Math.floor(fakeCount / 2);
+
+      for (let i = 0; i < fakeCount; i++) {
+        fakeMatrix[i] = [];
+        for (let j = 0; j < fakeCount; j++) {
+          if (
+            i >= additionalDots - 1 &&
+            i <= fakeCount - additionalDots &&
+            j >= additionalDots - 1 &&
+            j <= fakeCount - additionalDots
+          ) {
+            fakeMatrix[i][j] = 0;
+            continue;
+          }
+
+          if (Math.sqrt((i - center) * (i - center) + (j - center) * (j - center)) > center) {
+            fakeMatrix[i][j] = 0;
+            continue;
+          }
+
+          //Get random dots from QR code to show it outside of QR code
+          fakeMatrix[i][j] = this._qr.isDark(
+            j - 2 * additionalDots < 0 ? j : j >= count ? j - 2 * additionalDots : j - additionalDots,
+            i - 2 * additionalDots < 0 ? i : i >= count ? i - 2 * additionalDots : i - additionalDots
+          )
+            ? 1
+            : 0;
+        }
+      }
+
+      for (let i = 0; i < fakeCount; i++) {
+        for (let j = 0; j < fakeCount; j++) {
+          if (!fakeMatrix[i][j]) continue;
+
+          dot.draw(
+            xFakeBeginning + i * dotSize,
+            yFakeBeginning + j * dotSize,
+            dotSize,
+            (xOffset: number, yOffset: number): boolean => {
+              return !!fakeMatrix[i + xOffset]?.[j + yOffset];
+            }
+          );
+          if (dot._element && this._dotsClipPath) {
+            this._dotsClipPath.appendChild(dot._element);
+          }
+        }
+      }
+    }
   }
 
   drawCorners(): void {
@@ -252,7 +293,8 @@ export default class QRSVG {
 
     const count = this._qr.getModuleCount();
     const minSize = Math.min(options.width, options.height) - options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
+    const realQRSize = options.shape === shapeTypes.circle ? minSize / Math.sqrt(2) : minSize;
+    const dotSize = Math.floor(realQRSize / count);
     const cornersSquareSize = dotSize * 7;
     const cornersDotSize = dotSize * 3;
     const xBeginning = Math.floor((options.width - count * dotSize) / 2);
@@ -269,7 +311,7 @@ export default class QRSVG {
       let cornersDotClipPath = this._dotsClipPath;
 
       if (options.cornersSquareOptions?.gradient || options.cornersSquareOptions?.color) {
-        cornersSquareClipPath = this._window.document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+        cornersSquareClipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
         cornersSquareClipPath.setAttribute("id", `clip-path-corners-square-color-${column}-${row}`);
         this._defs.appendChild(cornersSquareClipPath);
         this._cornersSquareClipPath = this._cornersDotClipPath = cornersDotClipPath = cornersSquareClipPath;
@@ -287,11 +329,7 @@ export default class QRSVG {
       }
 
       if (options.cornersSquareOptions?.type) {
-        const cornersSquare = new QRCornerSquare({
-          svg: this._element,
-          type: options.cornersSquareOptions.type,
-          window: this._window
-        });
+        const cornersSquare = new QRCornerSquare({ svg: this._element, type: options.cornersSquareOptions.type });
 
         cornersSquare.draw(x, y, cornersSquareSize, rotation);
 
@@ -299,11 +337,7 @@ export default class QRSVG {
           cornersSquareClipPath.appendChild(cornersSquare._element);
         }
       } else {
-        const dot = new QRDot({
-          svg: this._element,
-          type: options.dotsOptions.type,
-          window: this._window
-        });
+        const dot = new QRDot({ svg: this._element, type: options.dotsOptions.type });
 
         for (let i = 0; i < squareMask.length; i++) {
           for (let j = 0; j < squareMask[i].length; j++) {
@@ -326,7 +360,7 @@ export default class QRSVG {
       }
 
       if (options.cornersDotOptions?.gradient || options.cornersDotOptions?.color) {
-        cornersDotClipPath = this._window.document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+        cornersDotClipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
         cornersDotClipPath.setAttribute("id", `clip-path-corners-dot-color-${column}-${row}`);
         this._defs.appendChild(cornersDotClipPath);
         this._cornersDotClipPath = cornersDotClipPath;
@@ -344,11 +378,7 @@ export default class QRSVG {
       }
 
       if (options.cornersDotOptions?.type) {
-        const cornersDot = new QRCornerDot({
-          svg: this._element,
-          type: options.cornersDotOptions.type,
-          window: this._window
-        });
+        const cornersDot = new QRCornerDot({ svg: this._element, type: options.cornersDotOptions.type });
 
         cornersDot.draw(x + dotSize * 2, y + dotSize * 2, cornersDotSize, rotation);
 
@@ -356,11 +386,7 @@ export default class QRSVG {
           cornersDotClipPath.appendChild(cornersDot._element);
         }
       } else {
-        const dot = new QRDot({
-          svg: this._element,
-          type: options.dotsOptions.type,
-          window: this._window
-        });
+        const dot = new QRDot({ svg: this._element, type: options.dotsOptions.type });
 
         for (let i = 0; i < dotMask.length; i++) {
           for (let j = 0; j < dotMask[i].length; j++) {
@@ -384,38 +410,10 @@ export default class QRSVG {
     });
   }
 
-  imageToBlob(): void {
-    if (!this._image) return;
-    // fix blurry svg
-    if (/(\.svg$)|(^data:image\/svg)/.test(this._options.image ?? "")) {
-      this._image.width = this._options.width;
-      this._image.height = this._options.height;
-    }
-    if (this._options.imageOptions.saveAsBlob && this._canvas) {
-      const ctx = this._canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(this._image, 0, 0, this._canvas.width, this._canvas.height);
-        this._imageUri = this._canvas.toDataURL("image/png");
-        console.log(this._imageUri);
-      }
-    }
-  }
-
   loadImage(): Promise<void> {
     return new Promise((resolve, reject) => {
       const options = this._options;
-
-      if (options.nodeCanvas?.loadImage && options.image) {
-        options.nodeCanvas
-          .loadImage(options.image)
-          .then((image: HTMLImageElement) => {
-            this._image = image;
-            resolve();
-          })
-          .catch(reject);
-        return;
-      }
-      const image = new this._window.Image();
+      const image = new Image();
 
       if (!options.image) {
         return reject("Image is not defined");
@@ -433,7 +431,7 @@ export default class QRSVG {
     });
   }
 
-  drawImage({
+  async drawImage({
     width,
     height,
     count,
@@ -443,7 +441,7 @@ export default class QRSVG {
     height: number;
     count: number;
     dotSize: number;
-  }): void {
+  }): Promise<void> {
     const options = this._options;
     const xBeginning = Math.floor((options.width - count * dotSize) / 2);
     const yBeginning = Math.floor((options.height - count * dotSize) / 2);
@@ -452,12 +450,15 @@ export default class QRSVG {
     const dw = width - options.imageOptions.margin * 2;
     const dh = height - options.imageOptions.margin * 2;
 
-    const image = this._window.document.createElementNS("http://www.w3.org/2000/svg", "image");
-    image.setAttribute("href", this._imageUri || "");
+    const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
     image.setAttribute("x", String(dx));
     image.setAttribute("y", String(dy));
     image.setAttribute("width", `${dw}px`);
     image.setAttribute("height", `${dh}px`);
+
+    const imageUrl = await toDataUrl(options.image || "");
+
+    image.setAttribute("href", imageUrl || "");
 
     this._element.appendChild(image);
   }
@@ -482,7 +483,7 @@ export default class QRSVG {
     name: string;
   }): void {
     const size = width > height ? width : height;
-    const rect = this._window.document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("x", String(x));
     rect.setAttribute("y", String(y));
     rect.setAttribute("height", String(height));
@@ -492,7 +493,7 @@ export default class QRSVG {
     if (options) {
       let gradient: SVGElement;
       if (options.type === gradientTypes.radial) {
-        gradient = this._window.document.createElementNS("http://www.w3.org/2000/svg", "radialGradient");
+        gradient = document.createElementNS("http://www.w3.org/2000/svg", "radialGradient");
         gradient.setAttribute("id", name);
         gradient.setAttribute("gradientUnits", "userSpaceOnUse");
         gradient.setAttribute("fx", String(x + width / 2));
@@ -533,7 +534,7 @@ export default class QRSVG {
           x1 = x1 - width / 2 / Math.tan(rotation);
         }
 
-        gradient = this._window.document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+        gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
         gradient.setAttribute("id", name);
         gradient.setAttribute("gradientUnits", "userSpaceOnUse");
         gradient.setAttribute("x1", String(Math.round(x0)));
@@ -543,7 +544,7 @@ export default class QRSVG {
       }
 
       options.colorStops.forEach(({ offset, color }: { offset: number; color: string }) => {
-        const stop = this._window.document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
         stop.setAttribute("offset", `${100 * offset}%`);
         stop.setAttribute("stop-color", color);
         gradient.appendChild(stop);

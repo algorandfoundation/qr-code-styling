@@ -1,13 +1,11 @@
-import { DotType, GetNeighbor, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types/index.js";
+import { DotType, GetNeighbor, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs } from "../../types/index.js";
 export default class QRDot {
     _element?: SVGElement;
     _svg: SVGElement;
     _type: DotType;
-    _window: Window;
-    constructor({ svg, type, window }: {
+    constructor({ svg, type }: {
         svg: SVGElement;
         type: DotType;
-        window: Window;
     });
     draw(x: number, y: number, size: number, getNeighbor: GetNeighbor): void;
     _rotateFigure({ x, y, size, rotation, draw }: RotateFigureArgs): void;

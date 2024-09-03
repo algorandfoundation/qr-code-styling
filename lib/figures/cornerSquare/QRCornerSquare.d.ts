@@ -1,13 +1,11 @@
-import { CornerSquareType, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types/index.js";
+import { CornerSquareType, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs } from "../../types/index.js";
 export default class QRCornerSquare {
     _element?: SVGElement;
     _svg: SVGElement;
     _type: CornerSquareType;
-    _window: Window;
-    constructor({ svg, type, window }: {
+    constructor({ svg, type }: {
         svg: SVGElement;
         type: CornerSquareType;
-        window: Window;
     });
     draw(x: number, y: number, size: number, rotation: number): void;
     _rotateFigure({ x, y, size, rotation, draw }: RotateFigureArgs): void;
